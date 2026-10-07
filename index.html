@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#315efb">
 <link rel="manifest" href="manifest.webmanifest">
-<title>收費計算｜手繪塗鴉＋一鍵繳費單 v16.42</title>
+<title>收費計算｜手繪塗鴉＋一鍵繳費單 v16.43</title>
 <style>
 :root{--bg:#f4f6fb;--card:#fff;--text:#20242b;--muted:#6c7480;--line:#e4e8ef;--blue:#315efb;--blue2:#eaf0ff;--green:#17875d;--green2:#eaf8f1;--red:#c0392b;--red2:#fff0ed;--shadow:0 6px 20px rgba(30,50,90,.06)}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC",sans-serif}
@@ -226,7 +226,7 @@ input,select{border:3px solid rgba(74,63,78,.22);border-radius:12px;background:#
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-<header><div class="headerRow"><div><span class="brand">收費計算</span><span class="subtitle">功能完整・分類清楚・手機優先</span></div><span class="version">Excel 2026 已匯入・v16.42</span></div></header>
+<header><div class="headerRow"><div><span class="brand">收費計算</span><span class="subtitle">功能完整・分類清楚・手機優先</span></div><span class="version">Excel 2026 已匯入・v16.43</span></div></header>
 <main>
 <section id="home" class="section on">
 <h1>首頁</h1>
@@ -339,7 +339,7 @@ function filterCategories(){return ['全部','月繳','安親班','數學班','�
 function initFilters(){document.getElementById('studentTabs').innerHTML=filterCategories().map(v=>`<button type="button" class="btn ${v===studentFilter?'primary':''}" onclick="setStudentFilter('${v}')">${v}</button>`).join('');const hint=document.getElementById('studentFilterHint');if(hint)hint.textContent=studentFilter}
 function setStudentFilter(v){studentFilter=v;initFilters();renderStudents()}
 function setBillingFilter(v){billingFilter=v;document.querySelectorAll('#billingTabs button').forEach(b=>b.classList.toggle('active',b.dataset.filter===v));const sel=document.getElementById('bagClassSelect');if(sel&&[...sel.options].some(o=>o.value===v))sel.value=v;renderBilling()}
-function go(id){document.querySelectorAll('.section').forEach(s=>s.classList.remove('on'));document.getElementById(id)?.classList.add('on');document.querySelectorAll('.bottomNav button').forEach(b=>b.classList.toggle('active',b.dataset.go===id));if(id==='home')renderHome();if(id==='students')renderStudents();if(id==='billing')renderBilling();if(id==='records')renderRecords();if(id==='overdue')renderOverdue();if(id==='settings')renderSettings();window.scrollTo(0,0)}
+function go(id){document.querySelectorAll('.section').forEach(s=>s.classList.remove('on'));document.getElementById(id)?.classList.add('on');document.querySelectorAll('.bottomNav button').forEach(b=>b.classList.toggle('active',b.dataset.go===id));try{if(id==='home')renderHome();else if(id==='students')renderStudents();else if(id==='billing')renderBilling();else if(id==='records')renderRecords();else if(id==='overdue')renderOverdue();else if(id==='settings')renderSettings();}catch(e){console.error('section render failed',id,e)}window.scrollTo(0,0)}
 function dateObj(v){if(!v)return null;const m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?new Date(+m[1],+m[2]-1,+m[3]):null}
 function fmtDate(d){return d?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`:''}
 function fixedCourseHolidaySet(){return new Set([
@@ -534,7 +534,7 @@ function renderHome(){
   const safeText=(v)=>String(v??'');
   const kp=document.getElementById('kPricing'); if(kp) kp.textContent=EXCEL.pricing.length;
   const kh=document.getElementById('kHistory'); if(kh) kh.textContent=importedHistory.length+payments.length;
-  const ko=document.getElementById('kOverdue'); if(ko) ko.textContent=importedOverdue.length+overdueAutoList().length;
+  const ko=document.getElementById('kOverdue'); if(ko){ko.textContent=importedOverdue.length; setTimeout(()=>{try{ko.textContent=importedOverdue.length+overdueAutoList().length}catch(e){console.error('overdue count failed',e)}},0)}
   const is=document.getElementById('importSummary'); if(is) is.textContent=`已匯入：${EXCEL.pricing.length} 筆收費欄位、${EXCEL.mainCourses.length} 個課程日期設定、${EXCEL.history.length} 筆 Excel 繳費紀錄、${EXCEL.overdue.length} 筆催繳資料、${EXCEL.holidays.length} 個假日、${EXCEL.calendar.length} 天日曆。`;
   const namedStudents=students.filter(s=>isActiveStudent(s)&&safeText(s.name).trim());
   const countSets={};
@@ -734,7 +734,7 @@ function saveSyncConfig(){const url=document.getElementById('syncUrl').value.tri
 async function syncUser(){try{const c=getSupabase();const {data:{user}}=await c.auth.getUser();return user||null}catch(e){return null}}
 async function signInSync(){try{const c=getSupabase(),email=document.getElementById('syncEmail').value.trim(),password=document.getElementById('syncPassword').value;if(!email||!password){alert('請輸入 Email 與密碼');return}const {error}=await c.auth.signInWithPassword({email,password});if(error)throw error;await updateSyncStatus();alert('雲端登入成功。現在可以按「立即同步」。')}catch(e){alert('登入失敗：'+e.message)}}
 async function signOutSync(){try{const c=getSupabase();await c.auth.signOut();updateSyncStatus()}catch(e){alert(e.message)}}
-function localPayload(){return {students, payments, recordEdits:jsonMap('feeAppV16_recordEdits'), recordCleared:jsonMap('feeAppV16_recordCleared'), overdueEdits:jsonMap('feeAppV16_overdueEdits'), bagIssued:jsonMap('feeAppV16_bagIssued'), materialOverrides:jsonMap('feeAppV16_materialOverrides'), leaveDeductions:jsonMap('feeAppV16_leaveDeductions'), leaveDays:jsonMap('feeAppV16_leaveDays'), exported_at:new Date().toISOString(), app_version:'v16.42'}}
+function localPayload(){return {students, payments, recordEdits:jsonMap('feeAppV16_recordEdits'), recordCleared:jsonMap('feeAppV16_recordCleared'), overdueEdits:jsonMap('feeAppV16_overdueEdits'), bagIssued:jsonMap('feeAppV16_bagIssued'), materialOverrides:jsonMap('feeAppV16_materialOverrides'), leaveDeductions:jsonMap('feeAppV16_leaveDeductions'), leaveDays:jsonMap('feeAppV16_leaveDays'), exported_at:new Date().toISOString(), app_version:'v16.43'}}
 async function syncNow(){
   try{
     const c=getSupabase();let user=await syncUser();if(!user)throw new Error('請先登入雲端');
@@ -745,7 +745,7 @@ async function syncNow(){
     else{
       // 安全原則：不直接覆蓋遠端。先合併學生／繳費資料，再寫回；相同 id 以較新的 updatedAt 優先。
       const rd=remote.data||{};const mapMerge=(a,b)=>{const m=new Map((a||[]).map(x=>[x.id,x]));for(const x of (b||[])){const o=m.get(x.id);if(!o)m.set(x.id,x);else if(String(x.updatedAt||'')>String(o.updatedAt||''))m.set(x.id,x)}return [...m.values()]};
-      const mergeMap=(a,b)=>({...((b&&typeof b==='object')?b:{}),...((a&&typeof a==='object')?a:{})}); const merged={...payload,students:mapMerge(payload.students,rd.students),payments:mapMerge(payload.payments,rd.payments),recordEdits:mergeMap(payload.recordEdits,rd.recordEdits),recordCleared:mergeMap(payload.recordCleared,rd.recordCleared),overdueEdits:mergeMap(payload.overdueEdits,rd.overdueEdits),bagIssued:mergeMap(payload.bagIssued,rd.bagIssued),materialOverrides:mergeMap(payload.materialOverrides,rd.materialOverrides),leaveDeductions:mergeMap(payload.leaveDeductions,rd.leaveDeductions),leaveDays:mergeMap(payload.leaveDays,rd.leaveDays),exported_at:new Date().toISOString(),app_version:'v16.42'};
+      const mergeMap=(a,b)=>({...((b&&typeof b==='object')?b:{}),...((a&&typeof a==='object')?a:{})}); const merged={...payload,students:mapMerge(payload.students,rd.students),payments:mapMerge(payload.payments,rd.payments),recordEdits:mergeMap(payload.recordEdits,rd.recordEdits),recordCleared:mergeMap(payload.recordCleared,rd.recordCleared),overdueEdits:mergeMap(payload.overdueEdits,rd.overdueEdits),bagIssued:mergeMap(payload.bagIssued,rd.bagIssued),materialOverrides:mergeMap(payload.materialOverrides,rd.materialOverrides),leaveDeductions:mergeMap(payload.leaveDeductions,rd.leaveDeductions),leaveDays:mergeMap(payload.leaveDays,rd.leaveDays),exported_at:new Date().toISOString(),app_version:'v16.43'};
       const {error}=await c.from('app_data').update({data:merged,updated_at:new Date().toISOString()}).eq('id','main').eq('user_id',user.id);if(error)throw error;
       for(const s of merged.students)await put('students',s);for(const x of merged.payments)await put('payments',x);
       if(merged.recordEdits)localStorage.setItem('feeAppV16_recordEdits',JSON.stringify(merged.recordEdits));if(merged.recordCleared)localStorage.setItem('feeAppV16_recordCleared',JSON.stringify(merged.recordCleared));if(merged.overdueEdits)localStorage.setItem('feeAppV16_overdueEdits',JSON.stringify(merged.overdueEdits));if(merged.bagIssued)localStorage.setItem('feeAppV16_bagIssued',JSON.stringify(merged.bagIssued));if(merged.materialOverrides)localStorage.setItem('feeAppV16_materialOverrides',JSON.stringify(merged.materialOverrides));if(merged.leaveDeductions)localStorage.setItem('feeAppV16_leaveDeductions',JSON.stringify(merged.leaveDeductions));if(merged.leaveDays)localStorage.setItem('feeAppV16_leaveDays',JSON.stringify(merged.leaveDays));students=await getAll('students');payments=await getAll('payments');initFilters();renderHome();renderStudents();renderBilling();renderRecords();renderOverdue();
@@ -773,7 +773,7 @@ async function makeExcelBlob(){
   const cdOffset=offset,cdSize=central.reduce((n,a)=>n+a.length,0),end=[];put32(end,0x06054b50);put16(end,0);put16(end,0);put16(end,central.length);put16(end,central.length);put32(end,cdSize);put32(end,cdOffset);put16(end,0);return new Blob([...chunks,...central,new Uint8Array(end)],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }
 function downloadBlob(blob,name){const a=document.createElement('a'),url=URL.createObjectURL(blob);a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500)}
-function jsonData(){return {app:'收費計算',version:'v16.42',exported_at:new Date().toISOString(),students:students.map(s=>({...s})),payments:payments.map(p=>({...p})),recordEdits:jsonMap('feeAppV16_recordEdits'),recordCleared:jsonMap('feeAppV16_recordCleared'),overdueEdits:jsonMap('feeAppV16_overdueEdits'),bagIssued:jsonMap('feeAppV16_bagIssued'),leaveDeductions:jsonMap('feeAppV16_leaveDeductions'),leaveDays:jsonMap('feeAppV16_leaveDays')}}
+function jsonData(){return {app:'收費計算',version:'v16.43',exported_at:new Date().toISOString(),students:students.map(s=>({...s})),payments:payments.map(p=>({...p})),recordEdits:jsonMap('feeAppV16_recordEdits'),recordCleared:jsonMap('feeAppV16_recordCleared'),overdueEdits:jsonMap('feeAppV16_overdueEdits'),bagIssued:jsonMap('feeAppV16_bagIssued'),leaveDeductions:jsonMap('feeAppV16_leaveDeductions'),leaveDays:jsonMap('feeAppV16_leaveDays')}}
 function makeCSV(){const escCSV=v=>{const s=String(v??'');return /[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};const rows=[['資料類型','姓名','班別','年級','課程','開始日','繳費期間起','繳費期間迄','繳費期限','發袋日','實際繳費日','學費','教材費','請假扣費','已繳','備註']];students.forEach(s=>{const p=calcStudentPeriod(s);rows.push(['目前收費',s.name||'',s.category||'',gradeOf(s),s.course||'',s.start||'',p?.start||'',p?.end||'',paymentDeadline(s)||'',s.issueDate||'','',s.tuition||0,materialForPeriod(s,p)||0,leaveDeductionForPeriod(s,p)||0,'',s.note||''])});payments.forEach(p=>{const st=students.find(s=>s.id===p.studentId)||{};rows.push(['繳費紀錄',st.name||'',st.category||'',gradeOf(st),st.course||'',st.start||'',p.start||'',p.end||'',p.dueDate||'',p.issueDate||st.issueDate||'',p.paidAt||'',p.tuition||0,p.material||0,p.deduction||0,p.paid?'是':'否',p.note||''])});return '\ufeff'+rows.map(r=>r.map(escCSV).join(',')).join('\r\n')}
 function markBackup(){const t=new Date().toLocaleString('zh-TW');localStorage.setItem('feeAppV15_lastBackup',t);const el=document.getElementById('backupLast');if(el)el.textContent=t}
 function updateBackupCenter(){const el=document.getElementById('backupCount');if(el)el.textContent=(students.length+payments.length).toLocaleString('zh-TW');const last=localStorage.getItem('feeAppV15_lastBackup')||'尚未備份';const le=document.getElementById('backupLast');if(le)le.textContent=last}
@@ -793,23 +793,14 @@ document.querySelectorAll('#billingTabs button[data-filter]').forEach(b=>b.addEv
   // 先讀取現有資料再顯示，避免新計算規則出錯時整個 App 變空白。
   await reloadActiveData();
   initFilters();
+  // 啟動時只先渲染首頁，避免 278 位學生同時觸發學生／收費／紀錄／催繳全部重新計算造成卡頓。
   try{renderHome()}catch(e){console.error('initial renderHome',e)}
-  try{renderStudents()}catch(e){console.error('initial renderStudents',e)}
-  try{renderBilling()}catch(e){console.error('initial renderBilling',e)}
-  try{renderRecords()}catch(e){console.error('initial renderRecords',e)}
-  try{renderOverdue()}catch(e){console.error('initial renderOverdue',e)}
-  try{renderSettings()}catch(e){console.error('initial renderSettings',e)}
   // Safety: when existing students are present, do not reseed/recalculate them on every launch.
   // Seed only a genuinely empty database so existing feeAppV15 data remains untouched.
   if(students.length===0){
     try{await seed(); await reloadActiveData()}catch(e){console.error('seed failed; existing data preserved',e)}
     initFilters();
     try{renderHome()}catch(e){console.error('post-seed renderHome',e)}
-    try{renderStudents()}catch(e){console.error('post-seed renderStudents',e)}
-    try{renderBilling()}catch(e){console.error('post-seed renderBilling',e)}
-    try{renderRecords()}catch(e){console.error('post-seed renderRecords',e)}
-    try{renderOverdue()}catch(e){console.error('post-seed renderOverdue',e)}
-    try{renderSettings()}catch(e){console.error('post-seed renderSettings',e)}
   }
   try{setBillingFilter('全部')}catch(e){console.error('setBillingFilter',e)}
 }catch(err){console.error('App bootstrap failed',err);const el=document.getElementById('importSummary');if(el)el.textContent='資料讀取失敗，請不要清除資料；現有資料不會自動刪除。'}})();
