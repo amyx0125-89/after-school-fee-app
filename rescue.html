@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>收費計算｜資料救援</title>
+<style>
+body{font-family:system-ui,-apple-system,"Microsoft JhengHei",sans-serif;padding:24px;max-width:900px;margin:auto;background:#fffaf3;color:#3f3328}
+.card{background:#fff;border:2px dashed #d9b98d;border-radius:18px;padding:20px;box-shadow:0 4px 12px rgba(0,0,0,.06)}
+button{border:0;border-radius:12px;padding:12px 16px;margin:6px 6px 0 0;font-size:16px;cursor:pointer;background:#6f8f72;color:#fff}
+button.secondary{background:#8b7a68}
+pre{white-space:pre-wrap;word-break:break-word;background:#f6f1e8;padding:12px;border-radius:12px;max-height:320px;overflow:auto}
+.ok{color:#2f6b39}.err{color:#a33}
+small{color:#74695e}
+</style>
+</head>
+<body>
+<div class="card">
+<h1>📦 收費計算｜資料救援</h1>
+<p>這個頁面<strong>不會修改或刪除</strong>任何資料，只讀取目前這個網站來源裡的 IndexedDB。</p>
+<p id="status">正在檢查 feeAppV15…</p>
+<div id="actions" style="display:none">
+<button id="downloadBtn">下載完整資料備份</button>
+<button id="studentsBtn" class="secondary">只下載學生資料</button>
+</div>
+<pre id="details"></pre>
+</div>
+<script>
+(async()=>{
+ const status=document.getElementById('status'), details=document.getElementById('details'), actions=document.getElementById('actions');
+ const report={db:null,stores:[],counts:{},data:{}};
+ try{
+   const db=await new Promise((resolve,reject)=>{
+     const r=indexedDB.open('feeAppV15');
+     r.onsuccess=()=>resolve(r.result);
+     r.onerror=()=>reject(r.error||new Error('無法開啟資料庫'));
+     r.onupgradeneeded=e=>{ e.target.transaction.abort(); reject(new Error('找不到既有 feeAppV15 資料庫，沒有進行任何修改。')); };
+   });
+   report.db=db.name;
+   report.stores=[...db.objectStoreNames];
+   for(const store of report.stores){
+     report.data[store]=await new Promise((resolve,reject)=>{
+       const tx=db.transaction(store,'readonly');
+       const req=tx.objectStore(store).getAll();
+       req.onsuccess=()=>resolve(req.result||[]);
+       req.onerror=()=>reject(req.error||new Error('讀取 '+store+' 失敗'));
+     });
+     report.counts[store]=report.data[store].length;
+   }
+   status.innerHTML='<span class="ok">✅ 已找到 feeAppV15，資料只讀取、沒有修改。</span>';
+   details.textContent=JSON.stringify({db:report.db,stores:report.stores,counts:report.counts},null,2);
+   actions.style.display='block';
+   const dl=(payload,name)=>{
+      const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+   };
+   document.getElementById('downloadBtn').onclick=()=>dl(report,'收費計算_feeAppV15_完整救援備份.json');
+   document.getElementById('studentsBtn').onclick=()=>dl({db:report.db,students:report.data.students||[]},'收費計算_學生資料救援備份.json');
+ }catch(err){
+   status.innerHTML='<span class="err">❌ '+(err?.message||err)+'</span>';
+   details.textContent='如果這裡顯示找不到 feeAppV15，先不要刪任何資料。\n\n'+String(err?.stack||err);
+ }
+})();
+</script>
+</body></html>
